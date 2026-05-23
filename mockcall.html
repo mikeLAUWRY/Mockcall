@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>Mock Call Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1c1c1c;
+    --border: rgba(255,255,255,0.08);
+    --border-med: rgba(255,255,255,0.14);
+    --text: #f0ede8;
+    --text-muted: rgba(240,237,232,0.45);
+    --text-dim: rgba(240,237,232,0.25);
+    --accent: #e8d5a3;
+    --accent-dim: rgba(232,213,163,0.12);
+    --green: #5cb88a;
+    --green-dim: rgba(92,184,138,0.12);
+    --red: #e06b6b;
+    --red-dim: rgba(224,107,107,0.12);
+    --blue: #6b9fe0;
+    --blue-dim: rgba(107,159,224,0.12);
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 env(safe-area-inset-bottom);
+  }
+
+  /* ── NAV ── */
+  .nav {
+    padding: 20px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+  }
+  .nav-badge {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; flex: 1; flex-direction: column; padding: 24px; }
+  .screen.active { display: flex; }
+
+  /* ── SETUP ── */
+  .setup-title {
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+    margin-top: 20px;
+  }
+  .setup-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .scenario-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .scenario-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .scenario-card:hover { border-color: var(--border-med); }
+  .scenario-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .scenario-card.selected .sc-title { color: var(--accent); }
+  .sc-info { flex: 1; }
+  .sc-title { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .sc-sub { font-size: 12px; color: var(--text-muted); }
+  .sc-check {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid var(--border-med);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .scenario-card.selected .sc-check {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .sc-check-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--bg);
+    display: none;
+  }
+  .scenario-card.selected .sc-check-dot { display: block; }
+
+  .diff-row { display: flex; gap: 8px; margin-bottom: 32px; }
+  .diff-btn {
+    flex: 1; padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .diff-btn:hover { border-color: var(--border-med); color: var(--text); }
+  .diff-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .api-key-wrap { margin-bottom: 20px; }
+  .api-key-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .api-key-wrap input:focus { border-color: var(--border-med); }
+  .api-key-wrap input::placeholder { color: var(--text-dim); }
+  .api-key-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .api-key-hint a { color: var(--accent); text-decoration: none; }
+
+  .start-btn {
+    width: 100%; padding: 15px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: -0.01em;
+  }
+  .start-btn:hover { opacity: 0.88; }
+  .start-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ── CALL SCREEN ── */
+  .call-header {
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .prospect-name { font-size: 15px; font-weight: 500; }
+  .prospect-role { font-size: 12px; color: var(--text-muted); }
+  .call-timer {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .transcript-box {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-right: 4px;
+    min-height: 200px;
+  }
+  .transcript-box::-webkit-scrollbar { width: 2px; }
+  .transcript-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 1px; }
+
+  .empty-state {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.03em;
+  }
+
+  .msg { display: flex; flex-direction: column; gap: 4px; }
+  .msg-who {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .msg.prospect .msg-who { color: var(--blue); }
+  .msg.you .msg-who { color: var(--green); }
+  .msg-bubble {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .msg.prospect .msg-bubble { color: rgba(240,237,232,0.85); }
+  .sys-msg {
+    font-size: 12px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    padding: 8px 12px;
+    background: var(--accent-dim);
+    border-radius: 6px;
+    border: 1px solid rgba(232,213,163,0.2);
+  }
+
+  .status-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    min-height: 42px;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-dim); flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .status-dot.listening { background: var(--green); animation: blink 1s infinite; }
+  .status-dot.thinking { background: var(--blue); animation: blink 0.5s infinite; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .status-text { font-size: 13px; color: var(--text-muted); }
+  .status-interim { font-size: 13px; color: var(--text); font-style: italic; }
+
+  .controls-row { display: flex; gap: 10px; }
+  .mic-btn {
+    flex: 1; padding: 14px;
+    border-radius: var(--radius);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.15s;
+    letter-spacing: -0.01em;
+  }
+  .mic-btn.idle { background: var(--accent); color: var(--bg); }
+  .mic-btn.idle:hover { opacity: 0.88; }
+  .mic-btn.recording { background: var(--red); color: white; }
+  .mic-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .end-btn {
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .end-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── DEBRIEF ── */
+  .debrief-top { margin-bottom: 20px; }
+  .debrief-title {
+    font-size: 22px; font-weight: 300; letter-spacing: -0.02em;
+    margin-bottom: 4px; margin-top: 16px;
+  }
+  .debrief-meta { font-size: 12px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+
+  .outcome-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: 12px; font-weight: 500;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+  }
+  .outcome-pill.booked { background: var(--green-dim); color: var(--green); border: 1px solid rgba(92,184,138,0.25); }
+  .outcome-pill.missed { background: var(--red-dim); color: var(--red); border: 1px solid rgba(224,107,107,0.25); }
+
+  .scores-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+  .score-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .score-tile-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+  .score-tile-val { font-size: 20px; font-weight: 500; letter-spacing: -0.02em; }
+  .score-tile-val.good { color: var(--green); }
+  .score-tile-val.ok { color: var(--accent); }
+  .score-tile-val.poor { color: var(--red); }
+  .score-tile-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  .debrief-section { margin-bottom: 20px; }
+  .debrief-section-title {
+    font-size: 12px; font-weight: 500;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .feedback-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(240,237,232,0.75);
+    margin-bottom: 8px;
+  }
+  .feedback-card:last-child { margin-bottom: 0; }
+  .feedback-card.positive {
+    border-color: rgba(92,184,138,0.2);
+    background: var(--green-dim);
+    color: rgba(92,184,138,0.9);
+  }
+
+  .transcript-scroll {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .transcript-scroll::-webkit-scrollbar { width: 2px; }
+  .transcript-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 1px; }
+
+  .action-row { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-secondary {
+    flex: 1; padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: var(--border-med); color: var(--text); }
+  .btn-primary {
+    flex: 1; padding: 13px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+
+  .analyzing-msg {
+    font-size: 13px; color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+  }
+  .spin {
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 1.5px solid var(--border-med);
+    border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .warn-bar {
+    background: rgba(232,213,163,0.08);
+    border: 1px solid rgba(232,213,163,0.2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    font-family: 'DM Mono', monospace;
+    display: none;
+  }
+
+  /* mic icon */
+  .mic-icon { width: 16px; height: 16px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="nav">
+    <span class="nav-logo">MOCK CALL</span>
+    <span class="nav-badge" id="nav-badge">1PASSWORD BDR</span>
+  </div>
+
+  <!-- ── SETUP ── -->
+  <div class="screen active" id="screen-setup">
+    <div class="setup-title">Ready to rep?</div>
+    <p class="setup-sub">Pick a scenario and go.</p>
+
+    <div class="warn-bar" id="speech-warn">Speech recognition unavailable — use Chrome or Edge for mic support.</div>
+
+    <div class="section-label">Scenario</div>
+    <div class="scenario-list" id="scenario-list">
+      <div class="scenario-card selected" data-scenario="cold-smb">
+        <div class="sc-info">
+          <div class="sc-title">Cold outbound — SMB</div>
+          <div class="sc-sub">IT manager · 50-person firm · skeptical</div>
+        </div>
+        <div class="sc-check"><div class="sc-check-dot"></div></div>
+      </div>
+      <div class="scenario-card" data-scenario="cold-mid">
+        <div class="sc-info">
+          <div class="sc-title">Cold outbound — mid-market</div>
+          <div class="sc-sub">VP Ops · 200-person company · gate-keeps hard</div>
+        </div>
+        <div class="sc-check"><div class="sc-check-dot"></div></div>
+      </div>
+      <div class="scenario-card" data-scenario="inbound">
+        <div class="sc-info">
+          <div class="sc-title">Inbound — web form</div>
+          <div class="sc-sub">Marketing manager · curious, non-committal</div>
+        </div>
+        <div class="sc-check"><div class="sc-check-dot"></div></div>
+      </div>
+      <div class="scenario-card" data-scenario="referral">
+        <div class="sc-info">
+          <div class="sc-title">Warm referral</div>
+          <div class="sc-sub">Finance lead · budget-focused · trusts the intro</div>
+        </div>
+        <div class="sc-check"><div class="sc-check-dot"></div></div>
+      </div>
+    </div>
+
+    <div class="section-label">Difficulty</div>
+    <div class="diff-row" id="diff-row">
+      <button class="diff-btn" data-diff="easy">Warm</button>
+      <button class="diff-btn selected" data-diff="medium">Realistic</button>
+      <button class="diff-btn" data-diff="hard">Brutal</button>
+    </div>
+
+    <div class="section-label">Anthropic API key</div>
+    <div class="api-key-wrap">
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+      <div class="api-key-hint">Get yours at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — stored only in this browser session.</div>
+    </div>
+
+    <button class="start-btn" id="start-btn" disabled>Start call</button>
+  </div>
+
+  <!-- ── CALL ── -->
+  <div class="screen" id="screen-call">
+    <div class="call-header">
+      <div class="avatar" id="call-avatar">JM</div>
+      <div>
+        <div class="prospect-name" id="call-name">Jordan Mills</div>
+        <div class="prospect-role" id="call-role">IT Manager · Meridian Group</div>
+      </div>
+      <div class="call-timer" id="call-timer">0:00</div>
+    </div>
+
+    <div class="transcript-box" id="transcript-box">
+      <div class="empty-state" id="empty-state">waiting for call to begin...</div>
+    </div>
+
+    <div class="status-row">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">tap the mic to speak</span>
+    </div>
+
+    <div class="controls-row">
+      <button class="mic-btn idle" id="mic-btn">
+        <svg class="mic-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="5" y="1" width="6" height="9" rx="3" fill="currentColor"/>
+          <path d="M2 7.5C2 10.538 4.686 13 8 13s6-2.462 6-5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <line x1="8" y1="13" x2="8" y2="15.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span id="mic-label">Tap to speak</span>
+      </button>
+      <button class="end-btn" id="end-btn">End</button>
+    </div>
+  </div>
+
+  <!-- ── DEBRIEF ── -->
+  <div class="screen" id="screen-debrief" style="overflow-y: auto;">
+    <div class="debrief-top">
+      <div class="debrief-title">Debrief</div>
+      <div class="debrief-meta" id="debrief-meta"></div>
+    </div>
+
+    <div id="outcome-wrap"></div>
+    <div class="scores-grid" id="scores-grid"></div>
+
+    <div class="debrief-section">
+      <div class="debrief-section-title">Feedback</div>
+      <div id="feedback-wrap"></div>
+    </div>
+
+    <div class="debrief-section">
+      <div class="debrief-section-title">Transcript</div>
+      <div class="transcript-scroll" id="debrief-transcript"></div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-secondary" id="replay-btn">Same scenario</button>
+      <button class="btn-primary" id="new-btn">New call →</button>
+    </div>
+    <div style="height: 24px;"></div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────
+// To hardcode your API key so you never have to enter it,
+// replace the empty string below with your key:
+// const HARDCODED_KEY = 'sk-ant-...';
+const HARDCODED_KEY = '';
+
+// ── SCENARIOS ────────────────────────────────────────────────────
+const SCENARIOS = {
+  'cold-smb': {
+    name: 'Jordan Mills', role: 'IT Manager · Meridian Group', initials: 'JM', label: 'Cold outbound — SMB',
+    prompt: d => `You are Jordan Mills, IT Manager at Meridian Group, a 50-person professional services firm. You just picked up an unknown number. It's a cold call from Ben, a BDR at 1Password.
+
+Current situation: your firm uses LastPass. There was the breach scare but management hasn't approved a switch. Real pain: shared credentials for contractors, offboarding is a mess. But you're busy and skeptical of sales calls.
+
+Difficulty — ${d === 'easy' ? 'Warm: after 1-2 solid points you open up and agree to a short meeting.' : d === 'medium' ? 'Realistic: push back on timing and price. Need 2-3 strong responses before agreeing to a meeting.' : 'Brutal: interrupt with objections, be dismissive, challenge everything. Only agree to a meeting if Ben is genuinely sharp — specific, relevant, not generic. If he\'s poor after 5 exchanges, tell him you have to go.'}
+
+Common objections to rotate through: "We already have something", "Not the right time", "Send me an email", "No budget", "How is this different from LastPass?"
+
+Rules: terse, real phone call energy. Max 2-3 sentences per turn. Never break character. If a meeting is earned, agree with a specific day (e.g. "Thursday afternoon works"). Track internally if meeting is booked.`
+  },
+  'cold-mid': {
+    name: 'Dana Reyes', role: 'VP Operations · Stackline', initials: 'DR', label: 'Cold outbound — mid-market',
+    prompt: d => `You are Dana Reyes, VP Operations at Stackline, a 200-person e-commerce analytics company. Cold call from Ben at 1Password, unknown number.
+
+Current state: no formal password manager. Engineering has shared accounts everywhere. You're not the budget owner — that's the CFO. You get a lot of cold calls and guard your time hard.
+
+Difficulty — ${d === 'easy' ? 'Neutral-positive. Willing to hear a 60-second pitch.' : d === 'medium' ? 'Gate-keep early. Warm up if Ben establishes relevance fast. Push the CFO as a blocker.' : 'Very dismissive. You\'re about to hang up in the first 20 seconds unless Ben says something genuinely specific. Hard no on budget questions.'}
+
+Objections: "Is this a sales call?", "I'm not the right person", "Our IT team handles that", "I have 3 minutes max", "We handle this internally."
+
+Rules: fast, clipped. Max 2-3 sentences. Agree to a brief intro call next week if earned.`
+  },
+  'inbound': {
+    name: 'Casey Park', role: 'Marketing Manager · Ovature', initials: 'CP', label: 'Inbound — web form',
+    prompt: d => `You are Casey Park, Marketing Manager at Ovature, a 75-person SaaS startup. You filled out a form on 1Password's website a week ago, mostly out of curiosity after an ad. Ben is following up.
+
+Your situation: you manage shared logins for the marketing team — it's a mess with Notion, HubSpot, LinkedIn. But the CTO would need to be involved in any real purchase. You're not sure if this is the right time.
+
+Difficulty — ${d === 'easy' ? 'Friendly, curious. Will agree to a demo pretty easily.' : d === 'medium' ? 'Interested but deflect to needing the CTO. Agree to a joint meeting if Ben handles multi-stakeholder situation well.' : 'Lukewarm — not sure why you even filled the form. Push back on whether you actually need this.'}
+
+Objections: "I'm not really the decision maker", "Our CTO would need to be involved", "Is this overkill for a small team?", "What does it cost?"
+
+Rules: more conversational than a cold call. Max 2-3 sentences. Agree to next step if Ben earns it.`
+  },
+  'referral': {
+    name: 'Alex Chen', role: 'Finance Lead · Norvin Capital', initials: 'AC', label: 'Warm referral',
+    prompt: d => `You are Alex Chen, Finance Lead at Norvin Capital, a 120-person investment firm. Ben was referred to you by your colleague Sarah who uses 1Password personally. Finance mindset — focused on cost, ROI, risk.
+
+Current state: no formal password manager, ad hoc approach. Real concern about regulatory risk and audit trails. You trust the intro but you're measured and want specifics.
+
+Difficulty — ${d === 'easy' ? 'Trust the referral. Open to a demo. One or two mild budget questions.' : d === 'medium' ? 'Warm but grill on pricing and compliance (SOC 2, audit logs). Push for ROI case.' : 'Polite but rigorous. Every claim needs evidence. Very skeptical of vague ROI talk. Compliance questions are non-negotiable before agreeing to anything.'}
+
+Objections: "What's the per-user cost?", "We'd need IT involved", "What security certifications do you have?", "How does implementation work?", "What's the ROI case?"
+
+Rules: measured, professional tone. Max 2-3 sentences. Agree to a meeting if Ben handles the financial and compliance questions well.`
+  }
+};
+
+// ── STATE ────────────────────────────────────────────────────────
+let selectedScenario = 'cold-smb';
+let selectedDiff = 'medium';
+let apiKey = HARDCODED_KEY;
+let history = [];
+let transcript = [];
+let timerSecs = 0;
+let timerInterval = null;
+let recognition = null;
+let isRecording = false;
+let callActive = false;
+let meetingBooked = false;
+
+// ── SPEECH ───────────────────────────────────────────────────────
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SpeechRec) document.getElementById('speech-warn').style.display = 'block';
+
+// ── SETUP INTERACTIONS ───────────────────────────────────────────
+document.querySelectorAll('.scenario-card').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.scenario-card').forEach(x => x.classList.remove('selected'));
+    c.classList.add('selected');
+    selectedScenario = c.dataset.scenario;
+  });
+});
+
+document.querySelectorAll('.diff-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    selectedDiff = b.dataset.diff;
+  });
+});
+
+const keyInput = document.getElementById('api-key-input');
+const startBtn = document.getElementById('start-btn');
+
+if (HARDCODED_KEY) {
+  document.querySelector('.api-key-wrap').style.display = 'none';
+  document.querySelector('.section-label[for="api"]').style.display = 'none';
+  startBtn.disabled = false;
+} else {
+  keyInput.addEventListener('input', () => {
+    apiKey = keyInput.value.trim();
+    startBtn.disabled = !apiKey.startsWith('sk-ant-');
+  });
+}
+
+startBtn.addEventListener('click', () => startCall(selectedScenario, selectedDiff));
+document.getElementById('end-btn').addEventListener('click', endCall);
+document.getElementById('mic-btn').addEventListener('click', toggleMic);
+document.getElementById('replay-btn').addEventListener('click', () => startCall(selectedScenario, selectedDiff));
+document.getElementById('new-btn').addEventListener('click', () => showScreen('screen-setup'));
+
+// ── SCREEN CONTROL ───────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── CALL FLOW ────────────────────────────────────────────────────
+function startCall(scenario, diff) {
+  selectedScenario = scenario;
+  selectedDiff = diff;
+  history = [];
+  transcript = [];
+  timerSecs = 0;
+  callActive = true;
+  meetingBooked = false;
+
+  const s = SCENARIOS[scenario];
+  document.getElementById('call-avatar').textContent = s.initials;
+  document.getElementById('call-name').textContent = s.name;
+  document.getElementById('call-role').textContent = s.role;
+  document.getElementById('transcript-box').innerHTML = '<div class="empty-state" id="empty-state">connecting...</div>';
+  document.getElementById('call-timer').textContent = '0:00';
+
+  showScreen('screen-call');
+
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timerSecs++;
+    const m = Math.floor(timerSecs / 60);
+    const s = (timerSecs % 60).toString().padStart(2, '0');
+    document.getElementById('call-timer').textContent = `${m}:${s}`;
+  }, 1000);
+
+  setStatus('idle', 'connecting...');
+  setMicDisabled(true);
+  getOpener(s, diff);
+}
+
+async function getOpener(scenario, diff) {
+  try {
+    const sysPrompt = scenario.prompt(diff);
+    const res = await callClaude(sysPrompt, [
+      { role: 'user', content: 'Ben is calling. You just picked up. Give your natural phone greeting — you don\'t know who\'s calling. Just your opener.' }
+    ]);
+    const text = res || 'Hello?';
+    history.push({ role: 'user', content: 'Ben is calling. You just picked up.' });
+    history.push({ role: 'assistant', content: text });
+    transcript.push({ who: 'prospect', text });
+    removeEmpty();
+    addMsg('prospect', text);
+    setStatus('idle', 'tap the mic to speak');
+    setMicDisabled(false);
+  } catch(e) {
+    addMsg('prospect', 'Hello?');
+    setStatus('idle', 'tap the mic to speak');
+    setMicDisabled(false);
+  }
+}
+
+async function sendTurn(userText) {
+  removeEmpty();
+  addMsg('you', userText);
+  transcript.push({ who: 'you', text: userText });
+  history.push({ role: 'user', content: `[Ben says]: ${userText}` });
+
+  setStatus('thinking', '');
+  setMicDisabled(true);
+  document.getElementById('end-btn').disabled = true;
+
+  try {
+    const sysPrompt = SCENARIOS[selectedScenario].prompt(selectedDiff);
+    const reply = await callClaude(sysPrompt, history);
+    const text = reply || 'Sorry, can you say that again?';
+    history.push({ role: 'assistant', content: text });
+    transcript.push({ who: 'prospect', text });
+    addMsg('prospect', text);
+
+    // detect meeting booked
+    const lower = text.toLowerCase();
+    if (!meetingBooked && (
+      lower.match(/\b(monday|tuesday|wednesday|thursday|friday)\b/) ||
+      lower.includes('next week') || lower.includes('works for me') ||
+      lower.includes('let\'s do') || lower.includes('sounds good') ||
+      lower.includes('calendar invite') || lower.includes('afternoon works') ||
+      lower.includes('morning works') || lower.includes('set something up')
+    )) {
+      meetingBooked = true;
+      setTimeout(() => addSysMsg('Meeting booked — great close. End the call or keep going.'), 300);
+    }
+
+    // detect call ending
+    if (
+      (lower.includes('i have to go') || lower.includes('i need to go') || lower.includes('take me off')) ||
+      (lower.includes('not interested') && history.length > 10)
+    ) {
+      setTimeout(() => { if (callActive) endCall(); }, 2200);
+    }
+
+  } catch(e) {
+    addMsg('prospect', 'Sorry, I lost you for a second.');
+  }
+
+  setStatus('idle', 'tap the mic to speak');
+  setMicDisabled(false);
+  document.getElementById('end-btn').disabled = false;
+}
+
+function endCall() {
+  callActive = false;
+  clearInterval(timerInterval);
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+  showDebrief();
+}
+
+// ── DEBRIEF ──────────────────────────────────────────────────────
+async function showDebrief() {
+  showScreen('screen-debrief');
+
+  const scenario = SCENARIOS[selectedScenario];
+  const m = Math.floor(timerSecs / 60);
+  const s = (timerSecs % 60).toString().padStart(2, '0');
+  const dur = `${m}:${s}`;
+  const diffLabel = selectedDiff === 'easy' ? 'Warm' : selectedDiff === 'medium' ? 'Realistic' : 'Brutal';
+
+  document.getElementById('debrief-meta').textContent = `${scenario.label} · ${dur} · ${diffLabel}`;
+  document.getElementById('outcome-wrap').innerHTML = '';
+  document.getElementById('scores-grid').innerHTML = `
+    <div class="score-tile"><div class="score-tile-label">Objection handling</div><div class="analyzing-msg"><div class="spin"></div>analyzing...</div></div>
+    <div class="score-tile"><div class="score-tile-label">Messaging</div><div class="analyzing-msg"><div class="spin"></div></div></div>
+  `;
+  document.getElementById('feedback-wrap').innerHTML = `<div class="analyzing-msg"><div class="spin"></div>generating feedback...</div>`;
+
+  // render transcript immediately
+  const debTx = document.getElementById('debrief-transcript');
+  debTx.innerHTML = '';
+  transcript.forEach(t => {
+    const div = document.createElement('div');
+    div.className = `msg ${t.who}`;
+    const label = t.who === 'you' ? 'You' : scenario.name;
+    div.innerHTML = `<div class="msg-who">${label}</div><div class="msg-bubble">${t.text}</div>`;
+    debTx.appendChild(div);
+  });
+
+  const txText = transcript.map(t => `${t.who === 'you' ? 'BEN' : 'PROSPECT'}: ${t.text}`).join('\n');
+
+  const prompt = `You are a senior B2B sales coach. Review this mock sales call. BDR is Ben, 3 days into his SMB BDR role at 1Password.
+
+Prospect: ${scenario.name}, ${scenario.role}
+Scenario: ${scenario.label}
+Difficulty: ${selectedDiff}
+Duration: ${dur}
+
+TRANSCRIPT:
+${txText}
+
+Respond ONLY with valid JSON — no markdown, no backticks, no commentary:
+{
+  "meeting_booked": true or false,
+  "outcome_note": "one sentence on outcome and why",
+  "objection_handling": { "score": 0-100, "label": "Poor/Fair/Good/Excellent" },
+  "messaging": { "score": 0-100, "label": "Poor/Fair/Good/Excellent" },
+  "talk_ratio": { "ben_pct": 0-100, "note": "too much/balanced/too little" },
+  "feedback": [
+    "Specific critique 1 (2-3 sentences, reference what was actually said)",
+    "Specific critique 2",
+    "Specific critique 3",
+    "One specific thing Ben did well"
+  ]
+}`;
+
+  try {
+    const raw = await callClaude(null, [{ role: 'user', content: prompt }]);
+    const clean = (raw || '{}').replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    renderScores(result);
+  } catch(e) {
+    document.getElementById('scores-grid').innerHTML = '<div class="score-tile"><div class="score-tile-label">Analysis unavailable</div><div class="score-tile-val">—</div></div>';
+    document.getElementById('feedback-wrap').innerHTML = '<div class="feedback-card">Could not generate feedback. Check your connection.</div>';
+    document.getElementById('outcome-wrap').innerHTML = '';
+  }
+}
+
+function renderScores(r) {
+  const booked = r.meeting_booked || meetingBooked;
+
+  document.getElementById('outcome-wrap').innerHTML = `
+    <div class="outcome-pill ${booked ? 'booked' : 'missed'}">
+      ${booked ? '✓ Meeting booked' : '✗ No meeting'} — ${r.outcome_note || ''}
+    </div>`;
+
+  const scores = [
+    { label: 'Objection handling', val: r.objection_handling?.score, sub: r.objection_handling?.label },
+    { label: 'Messaging', val: r.messaging?.score, sub: r.messaging?.label },
+    { label: 'Talk ratio (Ben)', val: r.talk_ratio?.ben_pct != null ? `${r.talk_ratio.ben_pct}%` : '—', sub: r.talk_ratio?.note, raw: true },
+    { label: 'Overall', val: Math.round(((r.objection_handling?.score || 0) + (r.messaging?.score || 0)) / 2), sub: booked ? 'meeting booked' : 'no meeting' }
+  ];
+
+  document.getElementById('scores-grid').innerHTML = scores.map(s => {
+    const n = s.raw ? null : parseInt(s.val);
+    const cls = s.raw
+      ? (s.sub === 'balanced' ? 'good' : 'ok')
+      : n >= 75 ? 'good' : n >= 50 ? 'ok' : 'poor';
+    return `<div class="score-tile">
+      <div class="score-tile-label">${s.label}</div>
+      <div class="score-tile-val ${cls}">${s.raw ? s.val : s.val}</div>
+      ${s.sub ? `<div class="score-tile-sub">${s.sub}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  const fw = document.getElementById('feedback-wrap');
+  fw.innerHTML = '';
+  (r.feedback || []).forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = `feedback-card${i === (r.feedback.length - 1) ? ' positive' : ''}`;
+    div.textContent = f;
+    fw.appendChild(div);
+  });
+}
+
+// ── MIC ──────────────────────────────────────────────────────────
+function toggleMic() {
+  if (isRecording) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  if (!SpeechRec) { alert('Speech recognition not supported. Try Chrome or Edge on desktop.'); return; }
+
+  recognition = new SpeechRec();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  let finalText = '';
+
+  recognition.onstart = () => {
+    isRecording = true;
+    const btn = document.getElementById('mic-btn');
+    btn.className = 'mic-btn recording';
+    document.getElementById('mic-label').textContent = 'Tap to send';
+    setStatus('listening', 'listening...');
+  };
+
+  recognition.onresult = e => {
+    let interim = '';
+    finalText = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const statusText = document.getElementById('status-text');
+    statusText.textContent = (finalText + interim).trim() || 'listening...';
+  };
+
+  recognition.onend = () => {
+    isRecording = false;
+    const btn = document.getElementById('mic-btn');
+    btn.className = 'mic-btn idle';
+    document.getElementById('mic-label').textContent = 'Tap to speak';
+    if (finalText.trim() && callActive) {
+      sendTurn(finalText.trim());
+    } else {
+      setStatus('idle', 'tap the mic to speak');
+    }
+  };
+
+  recognition.onerror = () => {
+    isRecording = false;
+    const btn = document.getElementById('mic-btn');
+    btn.className = 'mic-btn idle';
+    document.getElementById('mic-label').textContent = 'Tap to speak';
+    setStatus('idle', 'could not hear you — try again');
+  };
+
+  recognition.start();
+}
+
+function stopRecording() {
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────
+function setStatus(state, text) {
+  const dot = document.getElementById('status-dot');
+  const st = document.getElementById('status-text');
+  dot.className = 'status-dot' + (state === 'listening' ? ' listening' : state === 'thinking' ? ' thinking' : '');
+  st.textContent = state === 'thinking' ? 'prospect thinking...' : (text || '');
+}
+
+function setMicDisabled(v) {
+  document.getElementById('mic-btn').disabled = v;
+}
+
+function removeEmpty() {
+  const e = document.getElementById('empty-state');
+  if (e) e.remove();
+}
+
+function addMsg(who, text) {
+  const box = document.getElementById('transcript-box');
+  const div = document.createElement('div');
+  div.className = `msg ${who}`;
+  const label = who === 'you' ? 'You' : document.getElementById('call-name').textContent;
+  div.innerHTML = `<div class="msg-who">${label}</div><div class="msg-bubble">${text}</div>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function addSysMsg(text) {
+  const box = document.getElementById('transcript-box');
+  const div = document.createElement('div');
+  div.className = 'sys-msg';
+  div.textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function callClaude(systemPrompt, messages) {
+  const body = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1000,
+    messages
+  };
+  if (systemPrompt) body.system = systemPrompt;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-calls': 'true'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+</script>
+</body>
+</html>
